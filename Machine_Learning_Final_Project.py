@@ -4,5 +4,5 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn import preprocessing
 
-dataset = pd.read_csv("C:\\Users\\sirin\\Downloads\\archive\\mushrooms.csv")
+dataset = pd.read_csv("mushrooms.csv")
 dataset.info()
