@@ -1,12 +1,41 @@
+#pip install numpy
+#used for mathematical operations on arrays
 import numpy as np
+
+#pip install pandas
+#used for working with data sets; has functions for analysing, cleaning, exploring etc.
 import pandas as pd
+
+#pip install matplotlib
+#used for creating static, animated and interactive visualisations in Python
 import matplotlib.pyplot as plt
+
+#pip install seaborn
+#data visualisation library, based on matplotlib
 import seaborn as sns
+
+#pip install scikit-learn
+#provides supervised learning algorithms
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 
+#read dataset into variable
 dataset = pd.read_csv("mushrooms.csv")
 #print(dataset.head())
+
+"""
+--- Data Preprocessing ---
+add some comments what your code does and why
+"""
+
+#code here
+
+"""
+--- Feature Selection --- 
+add some comments what your code does and why
+"""
+
+#code here
 
 """
 --- Data Splitting ---
@@ -21,6 +50,13 @@ as mentioned above, the data training set must be at least 70%
 to make the new data sets the same (not shuffled randomly each time command is called)
 use `random st=10` optional parameter
 """
+
 train_data, test_data = train_test_split(dataset, test_size=0.2, random_state=10)
 
 print(test_data)
+
+
+"""
+--- Model Training --
+
+"""
