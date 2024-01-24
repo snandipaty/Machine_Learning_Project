@@ -27,9 +27,8 @@ from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
-from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score # not using roc auc because this is a regression problem
+from sklearn.metrics import r2_score # not using roc auc for regression problems
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 import matplotlib.pyplot as plt
 
@@ -88,7 +87,7 @@ sfs1 = SFS(KNeighborsClassifier(),
 
 sfs1 = sfs1.fit(np.array(X_train), y_train)
 
-#DECISION TREE
+# repeat with decision tree
 
 X_train_tree, X_test_tree, y_train_tree, y_test_tree = train_test_split(
     data.drop(labels=['class'], axis=1),
