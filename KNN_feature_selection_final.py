@@ -26,5 +26,5 @@ sfs1 = SFS(KNeighborsClassifier(),
 
 sfs1 = sfs1.fit(np.array(X_train), y_train)
 
-print("\nSelected Feature Indices:", sfs1.k_feature_idx_)
-print("Selected Features:", X_train.columns[list(sfs1.k_feature_idx_)])
+#print("\nSelected Feature Indices:", sfs1.k_feature_idx_)
+#print("Selected Features:", X_train.columns[list(sfs1.k_feature_idx_)])

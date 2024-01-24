@@ -1,10 +1,13 @@
 #pip install numpy
 #used for mathematical operations on arrays
 import numpy as np
-
+from sklearn.metrics import mean_squared_error, r2_score
 #pip install pandas
 #used for working with data sets; has functions for analysing, cleaning, exploring etc.
 import pandas as pd
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import learning_curve
 
 #pip install matplotlib
 #used for creating static, animated and interactive visualisations in Python
@@ -18,25 +21,68 @@ import seaborn as sns
 #provides supervised learning algorithms
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score # not using roc auc because this is a regression problem
+from mlxtend.feature_selection import SequentialFeatureSelector as SFS
+import matplotlib.pyplot as plt
 
 #read dataset into variable
-dataset = pd.read_csv("mushrooms.csv")
+dataset = pd.read_csv("processed.csv")
 
-print(dataset.describe())
+#print(dataset.describe())
 
 """
 --- Data Preprocessing ---
 add some comments what your code does and why
+
+
 """
 
-#code here
+# Load the CSV file into a pandas DataFrame
+csv_file_path = 'mushrooms.csv'
+df = pd.read_csv(csv_file_path)
+
+# Initialize LabelEncoder
+label_encoder = LabelEncoder()
+
+# Iterate over each column in the DataFrame
+for column in df.columns:
+    # Check if the column has object (string) dtype
+    if df[column].dtype == 'object':
+        # Use LabelEncoder to transform the string values into numerical values
+        df[column] = label_encoder.fit_transform(df[column])
+
+# Save the modified DataFrame back to a CSV file
+output_csv_path = 'processed.csv'
+df.to_csv(output_csv_path, index=False)
 
 """
 --- Feature Selection --- 
 add some comments what your code does and why
 """
 
-#code here
+data = pd.read_csv('processed.csv')
+
+# Separate train and test sets
+X_train, X_test, y_train, y_test = train_test_split(
+    data.drop(labels=['class'], axis=1),
+    data['class'],
+    test_size=0.3,
+    random_state=0)
+
+# Perform backward elimination using SequentialFeatureSelector with KNN
+sfs1 = SFS(KNeighborsClassifier(), 
+           k_features=5, 
+           forward=False, 
+           floating=False, 
+           verbose=2,
+           scoring='roc_auc',
+           cv=3)
+
+sfs1 = sfs1.fit(np.array(X_train), y_train)
 
 """
 --- Data Splitting ---
@@ -65,3 +111,61 @@ train_data, validation_data = train_test_split(train_data, test_size=0.1, random
 --- Model Training --
 
 """
+selected_X_train = X_train.iloc[:, list(sfs1.k_feature_idx_)]
+selected_X_test = X_test.iloc[:, list(sfs1.k_feature_idx_)]
+
+print("Training data shape:", selected_X_train.shape, y_train.shape)
+print("Testing data shape:", selected_X_test.shape, y_test.shape)
+
+# Initialize and fit the KNN regression model
+knn_model = KNeighborsRegressor(n_neighbors=5)  # You can adjust the number of neighbors (n_neighbors) as needed
+knn_model.fit(selected_X_train, y_train)
+
+# Make predictions on the test set
+y_pred_knn = knn_model.predict(selected_X_test)
+
+# Evaluate model performance
+mse_knn = mean_squared_error(y_test, y_pred_knn)
+r2_knn = r2_score(y_test, y_pred_knn)
+
+print(f'Mean Squared Error (KNN): {mse_knn}')
+print(f'R-squared (KNN): {r2_knn}')
+
+# Calculate residuals
+residuals_knn = y_test - y_pred_knn
+
+# Create a residual plot for KNN
+sns.scatterplot(x=y_pred_knn, y=residuals_knn)
+plt.title('Residual Plot (KNN)')
+plt.xlabel('Predicted Values')
+plt.ylabel('Residuals')
+plt.show()
+
+# Actual vs Predicted for KNN
+plt.scatter(y_test, y_pred_knn)
+plt.title('Actual vs. Predicted Values (KNN)')
+plt.xlabel('Actual Values')
+plt.ylabel('Predicted Values')
+plt.show()
+
+# Learning Curve for KNN
+train_sizes_knn, train_scores_knn, test_scores_knn = learning_curve(
+    knn_model, selected_X_train, y_train, cv=3, scoring='neg_mean_squared_error')
+
+train_scores_mean_knn = -np.mean(train_scores_knn, axis=1)
+test_scores_mean_knn = -np.mean(test_scores_knn, axis=1)
+
+plt.plot(train_sizes_knn, train_scores_mean_knn, label='Training error (KNN)')
+plt.plot(train_sizes_knn, test_scores_mean_knn, label='Validation error (KNN)')
+plt.title('Learning Curve (KNN)')
+plt.xlabel('Training Set Size')
+plt.ylabel('Mean Squared Error')
+plt.legend()
+plt.show()
+
+unique_predicted_values = np.unique(y_pred_knn)
+unique_residuals = np.unique(residuals_knn)
+
+print("Unique Predicted Values:", unique_predicted_values)
+print("Unique Residuals:", unique_residuals)
+
