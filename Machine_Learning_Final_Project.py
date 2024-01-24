@@ -289,3 +289,22 @@ unique_residuals_rf = np.unique(residuals_rf)
 
 print("Unique Predicted Values (Random Forest):", unique_predicted_values_rf)
 print("Unique Residuals (Random Forest):", unique_residuals_rf)
+
+# Confusion Matrix for KNN
+cm_knn = confusion_matrix(y_test, y_pred_binary)
+sns.heatmap(cm_knn, annot=True, fmt='d', cmap='Blues')
+plt.title('Confusion Matrix (KNN)')
+plt.xlabel('Predicted')
+plt.ylabel('True')
+plt.show()
+
+# Confusion Matrix for Decision Tree
+cm_dt = confusion_matrix(y_test_tree, (y_pred_dt > 0.5).astype(int))
+sns.heatmap(cm_dt, annot=True, fmt='d', cmap='Blues')
+plt.title('Confusion Matrix (Decision Tree)')
+plt.xlabel('Predicted')
+plt.ylabel('True')
+plt.show()
+
+print("duplicate train set", selected_X_train.duplicated())
+print("duplicate test set", selected_X_test.duplicated())
