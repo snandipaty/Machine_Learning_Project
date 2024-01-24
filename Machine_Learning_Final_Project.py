@@ -9,6 +9,10 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import learning_curve
 
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import roc_auc_score
+from mlxtend.feature_selection import SequentialFeatureSelector as SFS
+
 #pip install matplotlib
 #used for creating static, animated and interactive visualisations in Python
 import matplotlib.pyplot as plt
@@ -84,6 +88,25 @@ sfs1 = SFS(KNeighborsClassifier(),
 
 sfs1 = sfs1.fit(np.array(X_train), y_train)
 
+#DECISION TREE
+
+X_train_tree, X_test_tree, y_train_tree, y_test_tree = train_test_split(
+    data.drop(labels=['class'], axis=1),
+    data['class'],
+    test_size=0.3,
+    random_state=0)
+
+# Perform backward elimination using SequentialFeatureSelector with Decision Trees
+sfs2 = SFS(DecisionTreeClassifier(), 
+           k_features=5, 
+           forward=False, 
+           floating=False, 
+           verbose=2,
+           scoring='roc_auc',
+           cv=3)
+
+sfs2 = sfs2.fit(np.array(X_train), y_train)
+
 """
 --- Data Splitting ---
 data train set must be at least 70%, preferably 80%
@@ -111,6 +134,8 @@ train_data, validation_data = train_test_split(train_data, test_size=0.1, random
 --- Model Training --
 
 """
+
+#K NEAREST NEIGHBOURS
 selected_X_train = X_train.iloc[:, list(sfs1.k_feature_idx_)]
 selected_X_test = X_test.iloc[:, list(sfs1.k_feature_idx_)]
 
@@ -169,3 +194,65 @@ unique_residuals = np.unique(residuals_knn)
 print("Unique Predicted Values:", unique_predicted_values)
 print("Unique Residuals:", unique_residuals)
 
+#DECISION TREE
+from sklearn.tree import DecisionTreeRegressor
+
+# Select the features based on the features selected using SequentialFeatureSelector
+selected_X_train_tree = X_train_tree.iloc[:, list(sfs2.k_feature_idx_)]
+selected_X_test_tree = X_test_tree.iloc[:, list(sfs2.k_feature_idx_)]
+
+print("Training data shape:", selected_X_train_tree.shape, y_train_tree.shape)
+print("Testing data shape:", selected_X_test_tree.shape, y_test_tree.shape)
+
+# Initialize and fit the Decision Tree regression model
+dt_model = DecisionTreeRegressor(random_state=0)  # You can adjust hyperparameters as needed
+dt_model.fit(selected_X_train_tree, y_train_tree)
+
+# Make predictions on the test set
+y_pred_dt = dt_model.predict(selected_X_test_tree)
+
+# Evaluate model performance
+mse_dt = mean_squared_error(y_test_tree, y_pred_dt)
+r2_dt = r2_score(y_test_tree, y_pred_dt)
+
+print(f'Mean Squared Error (Decision Tree): {mse_dt}')
+print(f'R-squared (Decision Tree): {r2_dt}')
+
+# Calculate residuals
+residuals_dt = y_test_tree - y_pred_dt
+
+# Create a residual plot for Decision Tree
+sns.scatterplot(x=y_pred_dt, y=residuals_dt)
+plt.title('Residual Plot (Decision Tree)')
+plt.xlabel('Predicted Values')
+plt.ylabel('Residuals')
+plt.show()
+
+# Actual vs Predicted for Decision Tree
+plt.scatter(y_test_tree, y_pred_dt)
+plt.title('Actual vs. Predicted Values (Decision Tree)')
+plt.xlabel('Actual Values')
+plt.ylabel('Predicted Values')
+plt.show()
+
+# Learning Curve for Decision Tree
+train_sizes_dt, train_scores_dt, test_scores_dt = learning_curve(
+    dt_model, selected_X_train_tree, y_train_tree, cv=3, scoring='neg_mean_squared_error')
+
+train_scores_mean_dt = -np.mean(train_scores_dt, axis=1)
+test_scores_mean_dt = -np.mean(test_scores_dt, axis=1)
+
+plt.plot(train_sizes_dt, train_scores_mean_dt, label='Training error (Decision Tree)')
+plt.plot(train_sizes_dt, test_scores_mean_dt, label='Validation error (Decision Tree)')
+plt.title('Learning Curve (Decision Tree)')
+plt.xlabel('Training Set Size')
+plt.ylabel('Mean Squared Error')
+plt.legend()
+plt.show()
+
+# Unique values in predicted values and residuals for Decision Tree
+unique_predicted_values_dt = np.unique(y_pred_dt)
+unique_residuals_dt = np.unique(residuals_dt)
+
+print("Unique Predicted Values (Decision Tree):", unique_predicted_values_dt)
+print("Unique Residuals (Decision Tree):", unique_residuals_dt)
