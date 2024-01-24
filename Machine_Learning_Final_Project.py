@@ -1,17 +1,9 @@
 #pip install numpy
 #used for mathematical operations on arrays
 import numpy as np
-from sklearn.metrics import mean_squared_error, r2_score
 #pip install pandas
 #used for working with data sets; has functions for analysing, cleaning, exploring etc.
 import pandas as pd
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import learning_curve
-
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import roc_auc_score
-from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 
 #pip install matplotlib
 #used for creating static, animated and interactive visualisations in Python
@@ -26,12 +18,24 @@ import seaborn as sns
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import learning_curve
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import roc_auc_score
+from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score # not using roc auc because this is a regression problem
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 import matplotlib.pyplot as plt
+
+
+import warnings
+warnings.simplefilter("ignore", category=FutureWarning)
 
 #read dataset into variable
 dataset = pd.read_csv("processed.csv")
@@ -122,12 +126,6 @@ use `random st={an integer}` optional parameter;
 {an integer} represents the splitting seed - data is split differently for each integer
 """
 
-train_data, test_data = train_test_split(dataset, test_size=0.2, random_state=2)
-
-#split training data into training and validation
-train_data, validation_data = train_test_split(train_data, test_size=0.1, random_state=2)
-
-#print(len(train_data), len(test_data), len(validation_data))
 
 
 """
@@ -164,14 +162,14 @@ sns.scatterplot(x=y_pred_knn, y=residuals_knn)
 plt.title('Residual Plot (KNN)')
 plt.xlabel('Predicted Values')
 plt.ylabel('Residuals')
-plt.show()
+plt.savefig('graphs/residual_plot_knn.png', dpi=200)
 
 # Actual vs Predicted for KNN
 plt.scatter(y_test, y_pred_knn)
 plt.title('Actual vs. Predicted Values (KNN)')
 plt.xlabel('Actual Values')
 plt.ylabel('Predicted Values')
-plt.show()
+plt.savefig('graphs/actual_vs_predicted_knn.png', dpi=200)
 
 # Learning Curve for KNN
 train_sizes_knn, train_scores_knn, test_scores_knn = learning_curve(
@@ -186,7 +184,7 @@ plt.title('Learning Curve (KNN)')
 plt.xlabel('Training Set Size')
 plt.ylabel('Mean Squared Error')
 plt.legend()
-plt.show()
+plt.savefig('graphs/learning_curve_knn', dpi=200)
 
 unique_predicted_values = np.unique(y_pred_knn)
 unique_residuals = np.unique(residuals_knn)
@@ -226,14 +224,14 @@ sns.scatterplot(x=y_pred_dt, y=residuals_dt)
 plt.title('Residual Plot (Decision Tree)')
 plt.xlabel('Predicted Values')
 plt.ylabel('Residuals')
-plt.show()
+plt.savefig('graphs/residual_plot_dt.png', dpi=200)
 
 # Actual vs Predicted for Decision Tree
 plt.scatter(y_test_tree, y_pred_dt)
 plt.title('Actual vs. Predicted Values (Decision Tree)')
 plt.xlabel('Actual Values')
 plt.ylabel('Predicted Values')
-plt.show()
+plt.savefig('graphs/actual_vs_predicted_dt.png', dpi=200)
 
 # Learning Curve for Decision Tree
 train_sizes_dt, train_scores_dt, test_scores_dt = learning_curve(
@@ -248,7 +246,7 @@ plt.title('Learning Curve (Decision Tree)')
 plt.xlabel('Training Set Size')
 plt.ylabel('Mean Squared Error')
 plt.legend()
-plt.show()
+plt.savefig('graphs/learning_curve_dt.png', dpi=200)
 
 # Unique values in predicted values and residuals for Decision Tree
 unique_predicted_values_dt = np.unique(y_pred_dt)
@@ -256,3 +254,39 @@ unique_residuals_dt = np.unique(residuals_dt)
 
 print("Unique Predicted Values (Decision Tree):", unique_predicted_values_dt)
 print("Unique Residuals (Decision Tree):", unique_residuals_dt)
+
+
+"""
+---> Random Forest
+"""
+
+from sklearn.ensemble import RandomForestClassifier
+
+#K NEAREST NEIGHBOURS
+selected_X_train_rf = X_train.iloc[:, list(sfs1.k_feature_idx_)]
+selected_X_test_rf = X_test.iloc[:, list(sfs1.k_feature_idx_)]
+
+# Initialize and fit the Decision Tree regression model
+
+rf_model = RandomForestClassifier(random_state=0)
+
+rf_model.fit(selected_X_train_rf, y_train_tree)
+
+# Make predictions on the test set
+y_pred_rf = rf_model.predict(selected_X_test_rf)
+
+# Evaluate model performance
+mse_rf = mean_squared_error(y_test_tree, y_pred_rf)
+r2_rf = r2_score(y_test_tree, y_pred_dt)
+
+print(f'Mean Squared Error (Random Forest): {mse_rf}')
+print(f'R-squared (Random Forest): {r2_rf}')
+# Calculate residuals
+residuals_rf = y_test_tree - y_pred_rf
+
+# Unique values in predicted values and residuals for Decision Tree
+unique_predicted_values_rf = np.unique(y_pred_rf)
+unique_residuals_rf = np.unique(residuals_rf)
+
+print("Unique Predicted Values (Random Forest):", unique_predicted_values_rf)
+print("Unique Residuals (Random Forest):", unique_residuals_rf)
