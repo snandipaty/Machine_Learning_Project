@@ -4,7 +4,7 @@ from sklearn.metrics import roc_auc_score
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 import numpy as np
 import pandas as pd
-
+"""""
 # Load dataset
 data = pd.read_csv('processed.csv')
 
@@ -26,5 +26,4 @@ sfs1 = SFS(RandomForestClassifier(),
 
 sfs1 = sfs1.fit(np.array(X_train), y_train)
 
-print("\nSelected Feature Indices:", sfs1.k_feature_idx_)
-print("Selected Features:", X_train.columns[list(sfs1.k_feature_idx_)])
+"""

@@ -1,20 +1,10 @@
-#pip install numpy
-#used for mathematical operations on arrays
 import numpy as np
-#pip install pandas
-#used for working with data sets; has functions for analysing, cleaning, exploring etc.
 import pandas as pd
-
-#pip install matplotlib
-#used for creating static, animated and interactive visualisations in Python
 import matplotlib.pyplot as plt
-
-#pip install seaborn
-#data visualisation library, based on matplotlib
 import seaborn as sns
-
-#pip install scikit-learn
-#provides supervised learning algorithms
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
@@ -26,7 +16,6 @@ from sklearn.model_selection import learning_curve
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import roc_auc_score
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
-
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score # not using roc auc for regression problems
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
@@ -49,7 +38,7 @@ add some comments what your code does and why
 """
 
 # Load the CSV file into a pandas DataFrame
-csv_file_path = 'mushrooms.csv'
+csv_file_path = 'processed.csv'
 df = pd.read_csv(csv_file_path)
 
 # Initialize LabelEncoder
@@ -74,7 +63,7 @@ add some comments what your code does and why
 data = pd.read_csv('processed.csv')
 
 # Separate train and test sets
-X_train, X_test, y_train, y_test = train_test_split(
+X_train_knn, X_test_knn, y_train_knn, y_test_knn = train_test_split(
     data.drop(labels=['class'], axis=1),
     data['class'],
     test_size=0.3,
@@ -89,7 +78,9 @@ sfs1 = SFS(KNeighborsClassifier(),
            scoring='roc_auc',
            cv=3)
 
-sfs1 = sfs1.fit(np.array(X_train), y_train)
+sfs1 = sfs1.fit(np.array(X_train_knn), y_train_knn)
+
+
 
 # repeat with decision tree
 
@@ -108,53 +99,45 @@ sfs2 = SFS(DecisionTreeClassifier(),
            scoring='roc_auc',
            cv=3)
 
-sfs2 = sfs2.fit(np.array(X_train), y_train)
+sfs2 = sfs2.fit(np.array(X_train_tree), y_train_tree)
 
-"""
---- Data Splitting ---
-data train set must be at least 70%, preferably 80%
-inside Data train set, the validation set is subsetting the training data
-testing is usually 5% - 10%, bigger than validation
+#RANDOM FORREST
 
-data in the code below is split into 80% training (10% validation set), 20% test
-these variables may change depending which is more effective
-as mentioned above, the data training set must be at least 70%
+X_train_rf, X_test_rf, y_train_rf, y_test_rf = train_test_split(
+    data.drop(labels=['class'], axis=1),
+    data['class'],
+    test_size=0.3,
+    random_state=0)
 
-to make the new data sets the same (not shuffled randomly each time command is called)
-use `random st={an integer}` optional parameter; 
-{an integer} represents the splitting seed - data is split differently for each integer
-"""
+# Perform backward elimination using SequentialFeatureSelector with Random Forest
+sfs3 = SFS(RandomForestClassifier(), 
+           k_features=5, 
+           forward=False, 
+           floating=False, 
+           verbose=2,
+           scoring='roc_auc',
+           cv=3)
+
+sfs3 = sfs3.fit(np.array(X_train_rf), y_train_rf)
 
 
 
-"""
---- Model Training --
-
-"""
 
 #K NEAREST NEIGHBOURS
-selected_X_train = X_train.iloc[:, list(sfs1.k_feature_idx_)]
-selected_X_test = X_test.iloc[:, list(sfs1.k_feature_idx_)]
-
-print("Training data shape:", selected_X_train.shape, y_train.shape)
-print("Testing data shape:", selected_X_test.shape, y_test.shape)
+selected_X_train = X_train_knn.iloc[:, list(sfs1.k_feature_idx_)]
+selected_X_test = X_test_knn.iloc[:, list(sfs1.k_feature_idx_)]
 
 # Initialize and fit the KNN regression model
 knn_model = KNeighborsRegressor(n_neighbors=5)  # You can adjust the number of neighbors (n_neighbors) as needed
-knn_model.fit(selected_X_train, y_train)
+knn_model.fit(selected_X_train, y_train_knn)
 
 # Make predictions on the test set
 y_pred_knn = knn_model.predict(selected_X_test)
 
-# Evaluate model performance
-mse_knn = mean_squared_error(y_test, y_pred_knn)
-r2_knn = r2_score(y_test, y_pred_knn)
 
-print(f'Mean Squared Error (KNN): {mse_knn}')
-print(f'R-squared (KNN): {r2_knn}')
 
 # Calculate residuals
-residuals_knn = y_test - y_pred_knn
+residuals_knn = y_test_knn - y_pred_knn
 
 # Create a residual plot for KNN
 sns.scatterplot(x=y_pred_knn, y=residuals_knn)
@@ -164,7 +147,7 @@ plt.ylabel('Residuals')
 plt.savefig('graphs/residual_plot_knn.png', dpi=200)
 
 # Actual vs Predicted for KNN
-plt.scatter(y_test, y_pred_knn)
+plt.scatter(y_test_knn, y_pred_knn)
 plt.title('Actual vs. Predicted Values (KNN)')
 plt.xlabel('Actual Values')
 plt.ylabel('Predicted Values')
@@ -172,7 +155,7 @@ plt.savefig('graphs/actual_vs_predicted_knn.png', dpi=200)
 
 # Learning Curve for KNN
 train_sizes_knn, train_scores_knn, test_scores_knn = learning_curve(
-    knn_model, selected_X_train, y_train, cv=3, scoring='neg_mean_squared_error')
+    knn_model, selected_X_train, y_train_knn, cv=3, scoring='neg_mean_squared_error')
 
 train_scores_mean_knn = -np.mean(train_scores_knn, axis=1)
 test_scores_mean_knn = -np.mean(test_scores_knn, axis=1)
@@ -185,126 +168,152 @@ plt.ylabel('Mean Squared Error')
 plt.legend()
 plt.savefig('graphs/learning_curve_knn', dpi=200)
 
-unique_predicted_values = np.unique(y_pred_knn)
-unique_residuals = np.unique(residuals_knn)
+# Confusion Matrix for KNN
+cm_knn = confusion_matrix(y_test_knn, y_pred_knn)
+sns.heatmap(cm_knn, annot=True, fmt='d', cmap='Blues')
+plt.title('Confusion Matrix (KNN)')
+plt.xlabel('Predicted')
+plt.ylabel('True')
+plt.savefig('graphs/confusion_matrix_knn', dpi=200)
 
-print("Unique Predicted Values:", unique_predicted_values)
-print("Unique Residuals:", unique_residuals)
+#PERFORMANCE METRICS KNN
+knn_accuracy = accuracy_score(y_test_knn, y_pred_knn)
+knn_precision = precision_score(y_test_knn, y_pred_knn)
+knn_recall = recall_score(y_test_knn, y_pred_knn)
+knn_f1 = f1_score(y_test_knn, y_pred_knn)
+
+print("PERFORMANCE METRICS KNN")
+print(f'Accuracy: {knn_accuracy:.2f}')
+print(f'Precision: {knn_precision:.2f}')
+print(f'Recall: {knn_recall:.2f}')
+print(f'F1 Score: {knn_f1:.2f}')
+
+
 
 #DECISION TREE
-from sklearn.tree import DecisionTreeRegressor
 
-# Select the features based on the features selected using SequentialFeatureSelector
+
 selected_X_train_tree = X_train_tree.iloc[:, list(sfs2.k_feature_idx_)]
 selected_X_test_tree = X_test_tree.iloc[:, list(sfs2.k_feature_idx_)]
 
-print("Training data shape:", selected_X_train_tree.shape, y_train_tree.shape)
-print("Testing data shape:", selected_X_test_tree.shape, y_test_tree.shape)
 
 # Initialize and fit the Decision Tree regression model
-dt_model = DecisionTreeRegressor(random_state=0)  # You can adjust hyperparameters as needed
-dt_model.fit(selected_X_train_tree, y_train_tree)
+tree_model = DecisionTreeRegressor(random_state=0)  # You can adjust hyperparameters as needed
+tree_model.fit(selected_X_train_tree, y_train_tree)
 
 # Make predictions on the test set
-y_pred_dt = dt_model.predict(selected_X_test_tree)
-
-# Evaluate model performance
-mse_dt = mean_squared_error(y_test_tree, y_pred_dt)
-r2_dt = r2_score(y_test_tree, y_pred_dt)
-
-print(f'Mean Squared Error (Decision Tree): {mse_dt}')
-print(f'R-squared (Decision Tree): {r2_dt}')
+y_pred_tree = tree_model.predict(selected_X_test_tree)
 
 # Calculate residuals
-residuals_dt = y_test_tree - y_pred_dt
+residuals_tree = y_test_tree - y_pred_tree
 
 # Create a residual plot for Decision Tree
-sns.scatterplot(x=y_pred_dt, y=residuals_dt)
+sns.scatterplot(x=y_pred_tree, y=residuals_tree)
 plt.title('Residual Plot (Decision Tree)')
 plt.xlabel('Predicted Values')
 plt.ylabel('Residuals')
 plt.savefig('graphs/residual_plot_dt.png', dpi=200)
 
 # Actual vs Predicted for Decision Tree
-plt.scatter(y_test_tree, y_pred_dt)
+plt.scatter(y_test_tree, y_pred_tree)
 plt.title('Actual vs. Predicted Values (Decision Tree)')
 plt.xlabel('Actual Values')
 plt.ylabel('Predicted Values')
 plt.savefig('graphs/actual_vs_predicted_dt.png', dpi=200)
 
 # Learning Curve for Decision Tree
-train_sizes_dt, train_scores_dt, test_scores_dt = learning_curve(
-    dt_model, selected_X_train_tree, y_train_tree, cv=3, scoring='neg_mean_squared_error')
+train_sizes_tree, train_scores_tree, test_scores_tree = learning_curve(
+    tree_model, selected_X_train_tree, y_train_tree, cv=3, scoring='neg_mean_squared_error')
 
-train_scores_mean_dt = -np.mean(train_scores_dt, axis=1)
-test_scores_mean_dt = -np.mean(test_scores_dt, axis=1)
+train_scores_mean_tree = -np.mean(train_scores_tree, axis=1)
+test_scores_mean_tree = -np.mean(test_scores_tree, axis=1)
 
-plt.plot(train_sizes_dt, train_scores_mean_dt, label='Training error (Decision Tree)')
-plt.plot(train_sizes_dt, test_scores_mean_dt, label='Validation error (Decision Tree)')
+
+plt.plot(train_sizes_tree, train_scores_mean_tree, label='Training error (Decision Tree)')
+plt.plot(train_sizes_tree, test_scores_mean_tree, label='Validation error (Decision Tree)')
 plt.title('Learning Curve (Decision Tree)')
 plt.xlabel('Training Set Size')
 plt.ylabel('Mean Squared Error')
 plt.legend()
 plt.savefig('graphs/learning_curve_dt.png', dpi=200)
 
-# Unique values in predicted values and residuals for Decision Tree
-unique_predicted_values_dt = np.unique(y_pred_dt)
-unique_residuals_dt = np.unique(residuals_dt)
 
-print("Unique Predicted Values (Decision Tree):", unique_predicted_values_dt)
-print("Unique Residuals (Decision Tree):", unique_residuals_dt)
+# Confusion Matrix for DECISION TREE
+cm_tree = confusion_matrix(y_test_tree, y_pred_tree)
+sns.heatmap(cm_tree, annot=True, fmt='d', cmap='Blues')
+plt.title('Confusion Matrix (RF)')
+plt.xlabel('Predicted')
+plt.ylabel('True')
+plt.savefig('graphs/confusion_matrix_tree', dpi=200)
 
 
-"""
----> Random Forest
-"""
+#PERFORMANCE METRICS
+tree_accuracy = accuracy_score(y_test_tree, y_pred_tree)
+tree_precision = precision_score(y_test_tree, y_pred_tree)
+tree_recall = recall_score(y_test_tree, y_pred_tree)
+tree_f1 = f1_score(y_test_tree, y_pred_tree)
 
-from sklearn.ensemble import RandomForestClassifier
+print("PERFORMANCE METRICS RANDOM FORREST")
+print(f'Accuracy: {tree_accuracy:.2f}')
+print(f'Precision: {tree_precision:.2f}')
+print(f'Recall: {tree_recall:.2f}')
+print(f'F1 Score: {tree_f1:.2f}')
 
-#K NEAREST NEIGHBOURS
-selected_X_train_rf = X_train.iloc[:, list(sfs1.k_feature_idx_)]
-selected_X_test_rf = X_test.iloc[:, list(sfs1.k_feature_idx_)]
+
+
+
+#K RANDOM FORREST
+selected_X_train_rf = X_train_rf.iloc[:, list(sfs3.k_feature_idx_)]
+selected_X_test_rf = X_test_rf.iloc[:, list(sfs3.k_feature_idx_)]
 
 # Initialize and fit the Decision Tree regression model
-
 rf_model = RandomForestClassifier(random_state=0)
-
-rf_model.fit(selected_X_train_rf, y_train_tree)
+rf_model.fit(selected_X_train_rf, y_train_rf)
 
 # Make predictions on the test set
 y_pred_rf = rf_model.predict(selected_X_test_rf)
 
-# Evaluate model performance
-mse_rf = mean_squared_error(y_test_tree, y_pred_rf)
-r2_rf = r2_score(y_test_tree, y_pred_dt)
 
-print(f'Mean Squared Error (Random Forest): {mse_rf}')
-print(f'R-squared (Random Forest): {r2_rf}')
 # Calculate residuals
-residuals_rf = y_test_tree - y_pred_rf
+residuals_rf = y_test_rf - y_pred_rf
 
-# Unique values in predicted values and residuals for Decision Tree
-unique_predicted_values_rf = np.unique(y_pred_rf)
-unique_residuals_rf = np.unique(residuals_rf)
+sns.scatterplot(x=y_pred_rf, y=residuals_rf)
+plt.title('Residual Plot (Random Forest)')
+plt.xlabel('Predicted Values')
+plt.ylabel('Residuals')
+plt.savefig('graphs/residual_plot_rf.png', dpi=200)
 
-print("Unique Predicted Values (Random Forest):", unique_predicted_values_rf)
-print("Unique Residuals (Random Forest):", unique_residuals_rf)
 
-# Confusion Matrix for KNN
-cm_knn = confusion_matrix(y_test, y_pred_binary)
-sns.heatmap(cm_knn, annot=True, fmt='d', cmap='Blues')
-plt.title('Confusion Matrix (KNN)')
+train_sizes_rf, train_scores_rf, test_scores_rf = learning_curve(
+    rf_model, selected_X_train_rf, y_train_rf, cv=3, scoring='neg_mean_squared_error')
+
+train_scores_mean_rf = -np.mean(train_scores_rf, axis=1)
+test_scores_mean_rf = -np.mean(test_scores_rf, axis=1)
+
+plt.plot(train_sizes_rf, train_scores_mean_rf, label='Training error (RF)')
+plt.plot(train_sizes_rf, test_scores_mean_rf, label='Validation error (RF)')
+plt.title('Learning Curve (RF)')
+plt.xlabel('Training Set Size')
+plt.ylabel('Mean Squared Error')
+plt.legend()
+plt.savefig('graphs/learning_curve_rf', dpi=200)
+
+cm_rf = confusion_matrix(y_test_rf, y_pred_rf)
+sns.heatmap(cm_rf, annot=True, fmt='d', cmap='Blues')
+plt.title('Confusion Matrix (RF)')
 plt.xlabel('Predicted')
 plt.ylabel('True')
-plt.show()
+plt.savefig('graphs/confusion_matrix_rf', dpi=200)
 
-# Confusion Matrix for Decision Tree
-cm_dt = confusion_matrix(y_test_tree, (y_pred_dt > 0.5).astype(int))
-sns.heatmap(cm_dt, annot=True, fmt='d', cmap='Blues')
-plt.title('Confusion Matrix (Decision Tree)')
-plt.xlabel('Predicted')
-plt.ylabel('True')
-plt.show()
 
-print("duplicate train set", selected_X_train.duplicated())
-print("duplicate test set", selected_X_test.duplicated())
+#PERFORMANCE METRICS
+rf_accuracy = accuracy_score(y_test_rf, y_pred_rf)
+rf_precision = precision_score(y_test_rf, y_pred_rf)
+rf_recall = recall_score(y_test_rf, y_pred_rf)
+rf_f1 = f1_score(y_test_rf, y_pred_rf)
+
+print("PERFORMANCE METRICS DECISION TREE")
+print(f'Accuracy: {rf_accuracy:.2f}')
+print(f'Precision: {rf_precision:.2f}')
+print(f'Recall: {rf_recall:.2f}')
+print(f'F1 Score: {rf_f1:.2f}')
